@@ -1,13 +1,8 @@
 from pyeda.inter import *
-
-# needed for newer python versions
 import collections.abc
 collections.Sequence = collections.abc.Sequence
 
-# Definition of Graph G:
-#   Let G be a graph over 32 nodes (namely, node 0, · · ·, node 31). For all 0 ≤ i, j ≤ 31, there is
-#   an edge from node i to node j if"""  """f (i + 3)%32 = j%32 or (i + 8)%32 = j%32. (% is the modular
-#   operator in C; e.g., 35% 32=3.)
+
 
 # Given a number i and a node (x or y)
 # Return the string expression of the given number represented with given node
@@ -15,6 +10,7 @@ collections.Sequence = collections.abc.Sequence
 #   i = 2, node = 'x'
 #   ~x[0] & ~x[1] & ~x[2] & x[3] & ~x[4]
 def createExpression(i, node):
+
     # change i format to 5 bits (0 and 1)
     var_format = ("%05d" % int(bin(i)[2:]))
     var_expression = ""
@@ -33,6 +29,7 @@ def createExpression(i, node):
 #   values = [0, 2], node = 'x'
 #   Or(And(~x[0], ~x[1], ~x[2], ~x[3], ~x[4]), And(~x[0], ~x[1], ~x[2], x[3], ~x[4]))
 def createBDD(values, node):
+
     BDDExprssion = None
     expression = ""
     for i in values:
@@ -41,9 +38,9 @@ def createBDD(values, node):
         expression += "("+createExpression(i, node)+")"
     return expr(expression)
 
-# Create the graph G stated above
-# Return the expression representing the graph G
+# Create the graph G and return the expression representing the graph G
 def createRR():
+
     expression = ""
     for i in range(32):
         for j in range(32):
@@ -55,12 +52,14 @@ def createRR():
 
 # Return the 2Step BDD RR2
 def compute2Step(RR1, RR2):
+
     RR1 = RR1.compose({y[0]:z[0], y[1]:z[1], y[2]:z[2], y[3]:z[3], y[4]:z[4]})
     RR2 = RR2.compose({x[0]:z[0], x[1]:z[1], x[2]:z[2], x[3]:z[3], x[4]:z[4]})
     return RR1 & RR2
 
 # Return the RR2Star BDD
 def computeRR2Star(RR):
+
     RR2Star = RR
     while (1):
         RR2StarPrime = RR2Star
@@ -75,20 +74,23 @@ def computeRR2Star(RR):
 #   num = 2, node = x   <- not string, variable x
 #   {x[0]: 0, x[1]: 0, x[2]: 0, x[3]: 1, x[4]: 0}
 def numToDictionary(num, node):
+
     result = {}
     num = ("%05d" % int(bin(num)[2:]))
     for i in range(5):
         result[node[i]] = int(num[i])
     return result
 
-###     Functions that test the BDDs RR, EVEN, PRIME, RR2, and RR2Star   ###
+# FUNCTIONS -----------------------------------
 def RR(num1, num2):
+
     val1 = numToDictionary(num1, x)
     val2 = numToDictionary(num2, y)
     val1.update(val2)
     return bool(RR_BDD.restrict(val1))
 
 def RR2(num1, num2):
+
     val1 = numToDictionary(num1, x)
     val2 = numToDictionary(num2, y)
     val1.update(val2)
@@ -109,41 +111,42 @@ def PRIME(num):
     return bool(P.restrict(val))
 
 
-
+# TEST CASES ------------------------------------------------
 def test_RR():
-    # testing RR(27, 3), expecting True
+    
+    #RR(27, 3) - TRUE
     print("\nRR(27,3): " + str(RR(27, 3)))
 
-    # testing RR(16, 20), expecting False
+    #RR(16, 20) - FALSE
     print("RR(16, 20): " + str(RR(16, 20)))
 
 def test_EVEN():
 
-    # testing EVEN(14)
+    #EVEN(14) - TRUE
     print("\nEVEN(14): " + str(EVEN(14)))
 
-    # testing EVEN(13)
+    #EVEN(13) - FALSE
     print("EVEN(13): " + str(EVEN(13)))
 
 def test_PRIME():
-    # testing PRIME(7)
+    #PRIME(7) - TRUE
     print("\nPRIME(7): " + str(PRIME(7)))
 
-    # testing PRIME(2)
+    #PRIME(2) - FALSE
     print("PRIME(2): " + str(PRIME(2)))
 
 def test_RR2():
-    # testing RR2(27, 6)
+    #RR2(27, 6) - TRUE
     print("\nRR2(27, 6): " + str(RR2(27, 6)))
 
-    # testing RR2(27, 9)
+    #RR2(27, 9) - FALSE
     print("RR2(27, 9): " + str(RR2(27, 9)))
 
 def test_RR2Star():
-    # testing RR2Star(23, 2)
+    #RR2Star(23, 2) - TRUE
     print("\nRR2Star(23, 2): " + str(RR2Star(23, 2)))
 
-    # testing RR2Star(29, 11)
+    #RR2Star(29, 11) - FALSE
     print("RR2Star(29, 11): " + str(RR2Star(29, 11)))
 
 
@@ -171,8 +174,3 @@ if __name__ == '__main__':
     test_RR2()
     test_RR2Star()
 
-    # print(list(RR_BDD.satisfy_all()))
-    # print(list(P.satisfy_all()))
-    # print(list(E.satisfy_all()))
-    # print(list(RR2_BDD.satisfy_all()))
-    # print(list(RR2Star_BDD.satisfy_all()))
