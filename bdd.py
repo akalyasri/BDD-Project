@@ -10,16 +10,18 @@ collections.Sequence = collections.abc.Sequence
 #   i = 2, node = 'x'
 #   ~x[0] & ~x[1] & ~x[2] & x[3] & ~x[4]
 def createExpression(i, node):
-
-    # change i format to 5 bits (0 and 1)
-    var_format = ("%05d" % int(bin(i)[2:]))
+    # Change i format to 5 bits (0 and 1)
+    var_format = "{:05d}".format(int(bin(i)[2:]))
     var_expression = ""
-    for index in range (5):
-        if (index != 0):
+
+    for index in range(5):
+        if index != 0:
             var_expression += "&"
-        if (var_format[index] == '0'):
+        
+        if var_format[index] == '0':
             var_expression += "~"
-        var_expression += node + "[" + str(index) + "]"
+        
+        var_expression += f"{node}[{index}]"
 
     return var_expression
 
@@ -29,25 +31,29 @@ def createExpression(i, node):
 #   values = [0, 2], node = 'x'
 #   Or(And(~x[0], ~x[1], ~x[2], ~x[3], ~x[4]), And(~x[0], ~x[1], ~x[2], x[3], ~x[4]))
 def createBDD(values, node):
-
     BDDExprssion = None
     expression = ""
+
     for i in values:
-        if (expression != ""):
+        if expression != "":
             expression += "|"
-        expression += "("+createExpression(i, node)+")"
+        
+        expression += f"({createExpression(i, node)})"
+    
     return expr(expression)
 
 # Create the graph G and return the expression representing the graph G
 def createRR():
-
     expression = ""
+
     for i in range(32):
         for j in range(32):
             if ((i + 3) % 32 == j % 32 or (i + 8) % 32 == j % 32):
-                if (expression != ""):
+                if expression != "":
                     expression += "|"
-                expression += "((" + createExpression(i, 'x') + ")&(" + createExpression(j, 'y') + "))"
+                
+                expression += f"(({createExpression(i, 'x')}) & ({createExpression(j, 'y')}))"
+
     return expr(expression)
 
 # Return the 2Step BDD RR2
@@ -149,6 +155,11 @@ def test_RR2Star():
     #RR2Star(29, 11) - FALSE
     print("RR2Star(29, 11): " + str(RR2Star(29, 11)))
 
+def testStatementA():
+    notExisits_u = P & ~E.smoothing(y)
+    result = ~notExisits_u
+
+    return result.is_one()
 
 if __name__ == '__main__':
 
@@ -174,3 +185,4 @@ if __name__ == '__main__':
     test_RR2()
     test_RR2Star()
 
+    print("Statement A is ", "True" if testStatementA() else "False")
