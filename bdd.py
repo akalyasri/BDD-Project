@@ -1,39 +1,39 @@
+# Need pyeda
 from pyeda.inter import *
 import collections.abc
 collections.Sequence = collections.abc.Sequence
 
-
-
-def createExpression(i, node):
-
-    var_format = "{:05d}".format(int(bin(i)[2:]))
-    var_expression = ""
+#generating a boolean expression for a given integer and node
+def generateBoolExpression(i, node):
+    varFormat = "{:05d}".format(int(bin(i)[2:]))
+    expression = ""
 
     for index in range(5):
         if index != 0:
-            var_expression += "&"
+            expression += "&"
+
+        if varFormat[index] == '0':
+            expression += "~"
         
-        if var_format[index] == '0':
-            var_expression += "~"
-        
-        var_expression += f"{node}[{index}]"
+        expression += f"{node}[{index}]"
 
-    return var_expression
+    return expression
 
-
-def createBDD(values, node):
-    BDDExprssion = None
+#creating a BDD expression
+def createBDDexpression(values, node):
     expression = ""
 
     for i in values:
         if expression != "":
             expression += "|"
         
-        expression += f"({createExpression(i, node)})"
+        expression += f"({generateBoolExpression(i, node)})"
     
     return expr(expression)
 
-def createRR():
+
+def generateRR():
+
     expression = ""
 
     for i in range(32):
@@ -42,143 +42,157 @@ def createRR():
                 if expression != "":
                     expression += "|"
                 
-                expression += f"(({createExpression(i, 'x')}) & ({createExpression(j, 'y')}))"
+                expression += f"(({generateBoolExpression(i, 'x')}) & ({generateBoolExpression(j, 'y')}))"
 
     return expr(expression)
 
-def compute2Step(RR1, RR2):
 
-    RR1 = RR1.compose({y[0]:z[0], y[1]:z[1], y[2]:z[2], y[3]:z[3], y[4]:z[4]})
-    RR2 = RR2.compose({x[0]:z[0], x[1]:z[1], x[2]:z[2], x[3]:z[3], x[4]:z[4]})
-    return RR1 & RR2
+def computeTwoStep(r1, r2):
 
-def computeRR2Star(RR):
+    r1 = r1.compose({
+        y[0]: z[0], y[1]: z[1], y[2]: z[2], y[3]: z[3], y[4]: z[4]
+    })
 
-    RR2Star = RR
-    while (1):
-        RR2StarPrime = RR2Star
-        RR2Star = RR2StarPrime | compute2Step(RR2Star, RR)
-        if (RR2Star.equivalent(RR2StarPrime)):
+    r2 = r2.compose({
+        x[0]: z[0], x[1]: z[1], x[2]: z[2], x[3]: z[3], x[4]: z[4]
+    })
+    return r1 & r2
+
+
+def computeRR2star(r):
+
+    RR2star = r
+    while True:
+        prev = RR2star
+        RR2star = prev | computeTwoStep(RR2star, r)
+        if RR2star.equivalent(prev):
             break
-    return RR2Star
+    return RR2star
 
 
-def numToDictionary(num, node):
+def convertNumToDict(num, node):
 
     result = {}
-    num = ("%05d" % int(bin(num)[2:]))
+    str = "{:05d}".format(int(bin(num)[2:]))
     for i in range(5):
-        result[node[i]] = int(num[i])
+        result[node[i]] = int(str[i])
     return result
 
-# FUNCTIONS -----------------------------------
 
-# For step 3.1
-def RR(num1, num2):
+# Step 3.1 Functions
 
-    val1 = numToDictionary(num1, x)
-    val2 = numToDictionary(num2, y)
-    val1.update(val2)
-    return bool(RR_BDD.restrict(val1))
+# if the RR holds between num 1 and num 2
+def checkRR(num1, num2):
 
-def EVEN(num):
-    val = numToDictionary(num, y)
-    return bool(E.restrict(val))
+    v1 = convertNumToDict(num1, x)
+    v2 = convertNumToDict(num2, y)
+    v1.update(v2)
 
-def PRIME(num):
-    val = numToDictionary(num, x)
-    return bool(P.restrict(val))
+    return bool(RRbdd.restrict(v1))
 
-# For step 3.2
-def RR2(num1, num2):
+#if the number is even
+def checkEven(num):
 
-    val1 = numToDictionary(num1, x)
-    val2 = numToDictionary(num2, y)
-    val1.update(val2)
-    return bool(RR2_BDD.restrict(val1))
-    
-def RR2Star(num1, num2):
-    val1 = numToDictionary(num1, x)
-    val2 = numToDictionary(num2, y)
-    val1.update(val2)
-    return bool(RR2Star_BDD.restrict(val1))
+    val = convertNumToDict(num, y)
+
+    return bool(Ebdd.restrict(val))
+
+#if the number is prime
+def checkPrime(num):
+
+    val = convertNumToDict(num, x)
+
+    return bool(Pbdd.restrict(val))
 
 
+# step 3.2 Functions
+
+#if the RR2 between num 1 and num 2
+def checkRR2(num1, num2):
+
+    v1 = convertNumToDict(num1, x)
+    v2 = convertNumToDict(num2, y)
+    v1.update(v2)
+
+    return bool(RR2bdd.restrict(v1))
+
+# if the RR2Star between num 1 and num 2
+def checkRRstar(num1, num2):
+
+    v1 = convertNumToDict(num1, x)
+    v2 = convertNumToDict(num2, y)
+    v1.update(v2)
+
+    return bool(RR2starbdd.restrict(v1))
 
 
-# TEST CASES ------------------------------------------------
+# Test Cases
 
-# Fpr step 3.1
-def test_RR():
-    
+def testRR():
     #RR(27, 3) - TRUE
-    print("RR(27,3): " + str(RR(27, 3)))
-
+    print("RR(27, 3): " + str(checkRR(27, 3)))
+    
     #RR(16, 20) - FALSE
-    print("RR(16, 20): " + str(RR(16, 20)))
+    print("RR(16, 20): " + str(checkRR(16, 20)))
 
-def test_EVEN():
 
+def testEven():
     #EVEN(14) - TRUE
-    print("EVEN(14): " + str(EVEN(14)))
-
+    print("EVEN(14): " + str(checkEven(14)))
+    
     #EVEN(13) - FALSE
-    print("EVEN(13): " + str(EVEN(13)))
+    print("EVEN(13): " + str(checkEven(13)))
 
-def test_PRIME():
+
+def testPrime():
     #PRIME(7) - TRUE
-    print("PRIME(7): " + str(PRIME(7)))
-
+    print("PRIME(7): " + str(checkPrime(7)))
+    
     #PRIME(2) - FALSE
-    print("PRIME(2): " + str(PRIME(2)))
+    print("PRIME(2): " + str(checkPrime(2)))
 
 
-# For step 3.2
-
-def test_RR2():
+def testRR2():
     #RR2(27, 6) - TRUE
-    print("RR2(27, 6): " + str(RR2(27, 6)))
-
+    print("RR2(27, 6): " + str(checkRR2(27, 6)))
+    
     #RR2(27, 9) - FALSE
-    print("RR2(27, 9): " + str(RR2(27, 9)))
+    print("RR2(27, 9): " + str(checkRR2(27, 9)))
 
- 
 
 def testStatementA():
-    notExisits_u = P & ~E.smoothing(y)
-    result = ~notExisits_u
-
+    not_exists_u = Pbdd & ~Ebdd.smoothing(y)
+    result = ~not_exists_u
     return result.is_one()
 
-if __name__ == '__main__':
 
+if __name__ == '__main__':
+    
     x = bddvars('x', 5)
     y = bddvars('y', 5)
     z = bddvars('z', 5)
 
+    # prime and even 
     prime = [3, 5, 7, 11, 13, 17, 19, 23, 29, 31]
     even = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
 
-    RR_BDD = expr2bdd(createRR())
+    # creating BDDs
+    RRbdd = expr2bdd(generateRR())
+    Pbdd = expr2bdd(createBDDexpression(prime, 'x'))
+    Ebdd = expr2bdd(createBDDexpression(even, 'y'))
 
-    
-    P = expr2bdd(createBDD(prime, 'x'))
-    E = expr2bdd(createBDD(even, 'y'))
+    # Compute RR2 and RR2star 
+    RR2bdd = computeTwoStep(RRbdd, RRbdd)
+    RR2bdd.smoothing(z)
+    RR2starbdd = computeRR2star(RRbdd)
 
-    RR2_BDD = compute2Step(RR_BDD, RR_BDD)
-    RR2_BDD.smoothing(z)
-    RR2Star_BDD = computeRR2Star(RR_BDD)
-
-    # Test cases
+    #print test cases and output
     print("\nStep 3.1 ---------------------\n")
-    test_RR()
-    
-    test_EVEN()
-    
-    test_PRIME()
+    testRR()
+    testEven()
+    testPrime()
 
     print("\nStep 3.2 ---------------------\n")
-    test_RR2()
+    testRR2()
 
-    #Last Step
     print("\nStep 3.4 ---------------------\n\nStatement A is ", "True" if testStatementA() else "False")
